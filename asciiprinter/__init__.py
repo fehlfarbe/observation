@@ -26,7 +26,7 @@ def image2ascii(filename, chars=list(' .,:;irsXA253hMHGS#@'), size=None):
     
 if __name__ == '__main__':
     ### test it :)
-    ascii = image2ascii("../res/about_01.jpg", size=(150,150))
+    ascii = image2ascii("../res/2015-05-08T15:07:14.698718.jpg", size=(150,150))
     print ascii
     with open("../res/ascii.txt", "w") as f:
         f.write(ascii)
