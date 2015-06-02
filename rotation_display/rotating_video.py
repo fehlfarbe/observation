@@ -16,23 +16,29 @@ if __name__ == '__main__':
     #cap = cv2.VideoCapture(0)
     #ret, frame = cap.read()
     camera = PiCamera()
-    
+    camera.resolution = (320,240)
     # show fullscreen image
-    cv2.namedWindow("Image", cv2.WINDOW_OPENGL)
+    cv2.namedWindow("Image", cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Image", cv2.WND_PROP_FULLSCREEN, 1)
     
     # open accelerometer
     mma = mma7455.MMA7455()
     # enter capture loop
     stream = io.BytesIO()
+    res = camera.resolution
     for f in camera.capture_continuous(stream, format="bgr", use_video_port=True):
         stream.seek(0)
         data = np.fromstring(stream.getvalue(), dtype=np.uint8)
-        res = camera.resolution
-        data = data.reshape((res[1], res[0], 3))
-        
+	rot = mma.getValueX()
+        print rot
+        frame = data.reshape((res[1], res[0], 3))
+        # calculate rotation matrix
+        mat = cv2.getRotationMatrix2D((frame.shape[1]/2, frame.shape[0]/2), rot, 1.0)
+        # apply rotation matrix
+        frame = cv2.warpAffine(frame, mat, (frame.shape[1], frame.shape[0]))
+	#camera.rotation = rot
         # show image, abort when ESC key pressed
-        cv2.imshow("Image", data)
+        cv2.imshow("Image", frame)
         k = cv2.waitKey(1)
         if k == 27: #ESC
             break
