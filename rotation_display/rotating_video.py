@@ -35,7 +35,8 @@ if __name__ == '__main__':
         
         stream.seek(0)
         data = np.fromstring(stream.getvalue(), dtype=np.uint8)
-        rot = mma.getValueX()
+        #rot = mma.getValueX()
+        rot = mma.getAngleXY()
         frame = data.reshape((res[1], res[0], 3))
         # calculate rotation matrix
         mat = cv2.getRotationMatrix2D((frame.shape[1]/2, frame.shape[0]/2), rot, 1.0)
