@@ -9,7 +9,7 @@ import zipfile
 import StringIO
 import requests
 import threading
-import hcsr04
+from sensors import hcsr04
 #from hcsr04 import HCSR04
 
 UPLOAD_URL = 'http://edgi:5000/upload'
