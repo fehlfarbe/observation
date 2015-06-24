@@ -16,6 +16,7 @@ import gobject
 import picamera
 import cv2
 from picamera.array import PiRGBArray
+import RPi.GPIO as GPIO
 from sensors import hcsr04
 from threading import Thread
 from jinja2 import Template
@@ -24,6 +25,8 @@ from jinja2 import Template
 DISTANCE_TRIGGER = 18
 DISTANCE_ECHO = 24
 MIN_DISTANCE = 1.0
+
+BUTTON_PIN = 22
 
 class Application():
     
@@ -57,6 +60,10 @@ class Application():
         self.measure_thread_run = False
         self.measure_thread = Thread(target=self.measureDistance)
         self.measure_thread.start()
+        # init button event
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.add_event_detect(BUTTON_PIN, GPIO.FALLING, callback=self.callback_yes_no, bouncetime=300)
         
         #start main loop
         gtk.main()
@@ -133,7 +140,8 @@ class Application():
         
         
     def callback_yes_no(self, widget, callback_data=None):
-        self.showWebWidget()
+        if self.notebook.current_page() == self.PAGE_QUESTION:
+            self.showWebWidget()
 
     def showStartWidget(self):
         self.notebook.set_current_page(self.PAGE_START)
