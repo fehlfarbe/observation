@@ -12,10 +12,10 @@ import pygtk
 pygtk.require('2.0')
 import gtk
 import webkit
+import gobject
+import picamera
 import cv2
 from picamera.array import PiRGBArray
-from picamera import PiCamera
-import picamera
 from sensors import hcsr04
 from threading import Thread
 from jinja2 import Template
@@ -26,6 +26,11 @@ DISTANCE_ECHO = 24
 MIN_DISTANCE = 1.0
 
 class Application():
+    
+    PAGE_START = 0
+    PAGE_QUESTION = 1
+    PAGE_LOADING = 2
+    PAGE_WEB = 3
     
     def __init__(self):
         # create mainwindow
@@ -56,20 +61,6 @@ class Application():
         #start main loop
         gtk.main()
         
-    def initCamera(self):
-        self.camera = PiCamera()
-        self.camera.vflip = False
-        self.camera.hflip = False
-        self.camera.resolution = (640, 480)
-    
-        # allow the camera to warmup
-        time.sleep(0.1)
-        
-        # capture initial frame
-        rawCapture = PiRGBArray(self.camera)
-        self.camera.capture(rawCapture, format="bgr")
-        image = rawCapture.array
-        
     def initHCSR04(self):
         self.hcsr04 = hcsr04.HCSR04(DISTANCE_TRIGGER, DISTANCE_ECHO)
         
@@ -79,12 +70,12 @@ class Application():
             while self.measure_thread_run:
                 distance = d.average_distance(5)
                 print distance
-                if self.notebook.current_page() == 0 and distance <= MIN_DISTANCE:
+                if self.notebook.current_page() == self.PAGE_START and distance <= MIN_DISTANCE:
                     image = self.takePhoto()
                     self.current_dir = self.createNewDirectory()
                     cv2.imwrite(os.path.join(self.current_dir, "image.jpg"), image)
                     self.showQuestionWidget()
-                elif self.notebook.current_page() == 2 and not self.video_active:
+                elif self.notebook.current_page() == self.PAGE_WEB and not self.video_active:
                     distance = d.average_distance(10)
                     if distance > MIN_DISTANCE:
                         self.showStartWidget()
@@ -98,19 +89,32 @@ class Application():
         self.start_label = gtk.Label("Startseite")
         # set question page
         self.question = gtk.VBox(spacing=10)
-        self.button_yes = gtk.Button("JA", stock=gtk.STOCK_YES)
-        self.button_no = gtk.Button("NEIN", stock=gtk.STOCK_NO)
-        self.question_label = gtk.Label("Möchten Sie das Bild wirklich hochladen?")
+        hbox = gtk.HBox(spacing=10)
+        self.button_yes = gtk.Button()
+        self.button_yes.set_image(gtk.image_new_from_file("res/yes.png"))
+        self.button_no = gtk.Button()
+        self.button_no.set_image(gtk.image_new_from_file("res/no.png"))
+        self.question_label = gtk.Label("<span size='38000'>Möchten Sie das Bild <b>wirklich</b> hochladen?</span>")
+        self.question_label.set_use_markup(gtk.TRUE)
         self.question_image = gtk.Image()
         self.question.pack_start(self.question_label)
         self.question.pack_start(self.question_image)
-        self.question.pack_start(self.button_yes)
-        self.question.pack_start(self.button_no)
+        hbox.pack_start(self.button_yes)
+        hbox.pack_start(self.button_no)
+        self.question.pack_start(hbox)
+        # set loading page
+        self.loading = gtk.VBox()
+        load_label = gtk.Label("<span size='38000'>Bild wird hochgeladen</span>")
+        load_label.set_use_markup(gtk.TRUE)
+        load_ani = gtk.image_new_from_file("res/loading.gif")
+        self.loading.pack_start(load_label)
+        self.loading.pack_start(load_ani)
         # set webview
         self.web = webkit.WebView()
         # append to notebook
         self.notebook.append_page(self.start_label)
         self.notebook.append_page(self.question)
+        self.notebook.append_page(self.loading)
         self.notebook.append_page(self.web)
         self.notebook.show()
         # append to mainwindow
@@ -132,18 +136,32 @@ class Application():
         self.showWebWidget()
 
     def showStartWidget(self):
-        self.notebook.set_current_page(0)
+        self.notebook.set_current_page(self.PAGE_START)
         
     def showQuestionWidget(self):
         self.question_image.set_from_file(os.path.join(self.current_dir, "image.jpg"))
-        self.notebook.set_current_page(1)
+        self.notebook.set_current_page(self.PAGE_QUESTION)
 
     def showWebWidget(self):
+        Thread(target=self.takeVideo, args=(self.current_dir, 10)).start()
+        self.notebook.set_current_page(self.PAGE_LOADING)        
         html = self.renderHTML()
         html_file = self.saveHTML(html)
+        print self.web.get_load_status()
         self.web.open(html_file)
-        self.notebook.set_current_page(2)
-        Thread(target=self.takeVideo, args=(self.current_dir, 10)).start()
+        print self.web.get_load_status()
+        
+        def timer():
+            if self.web.get_load_status().value_name == "WEBKIT_LOAD_FINISHED":
+                self.notebook.set_current_page(self.PAGE_WEB)
+                return False
+            return True
+            
+        source_id = gobject.timeout_add(100, timer)
+
+        print self.web.get_load_status()
+        #self.notebook.set_current_page(self.PAGE_WEB)
+        #print self.web.get_load_status()
         #self.notebook.set_current_page(0)
         
     def takePhoto(self):
