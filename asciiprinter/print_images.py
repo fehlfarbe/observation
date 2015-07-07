@@ -12,6 +12,7 @@ from asciiprinter import image2ascii, print_ascii_image
 def send_to_printer(text):
     lpr = subprocess.Popen("/usr/bin/lpr", stdin=subprocess.PIPE)
     lpr.stdin.write(text)
+    lpr.stdin.close()
 
 if __name__ == '__main__':
     parser = OptionParser()
@@ -36,7 +37,7 @@ if __name__ == '__main__':
             print "new file ", f
             f_path = os.path.join(options.dir, f)
             try:
-                ascii_image = image2ascii(f_path, chars=list(" .10@$"), size=(150,150), reverse=True)
+                ascii_image = image2ascii(f_path, chars=list(" .10@$"), size=(80,68), reverse=True)
                 send_to_printer(ascii_image)
                 if options.verbose:
                     print_ascii_image(ascii_image)

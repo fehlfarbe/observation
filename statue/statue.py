@@ -2,6 +2,8 @@
 Created on 29.06.2015
 
 @author: kolbe
+
+ToDo: extract faces
 '''
 import time
 import cv2
@@ -13,17 +15,18 @@ profile_face_cascade = cv2.CascadeClassifier('../res/haarcascade_profileface.xml
 
 IMAGE_SIZE = (320, 240)
 
-def getAngle(pos_x):
-    return (2.0 / IMAGE_SIZE[0]) * pos_x - 1
+def getRelativePosition(pos_x, width):
+    return (1.0/width) * pos_x
 
 def drawEye(frame, angle):
-    m = (frame.shape[1]/2, frame.shape[0]/2)
-    r = min(frame.shape[1]/2, frame.shape[0]/2)
-    offset = int(r*angle)
+    height, width = frame.shape[:2]
+    m = (width/2, height/2)
+    r = min(width/2, height/2)
+    
     cv2.circle(frame, m, r, (255,255,255), -1)
     cv2.circle(frame, m, r, (0,0,0), 2)
-    cv2.circle(frame, (m[0]-offset, m[1]), r/2, (255,130,100), -1)
-    cv2.circle(frame, (m[0]-offset, m[1]), r/3, (0,0,0), -1)
+    cv2.circle(frame, (int(angle*width), m[1]), r/2, (255,130,100), -1)
+    cv2.circle(frame, (int(angle*width), m[1]), r/3, (0,0,0), -1)
     
 
 
@@ -62,7 +65,7 @@ def detectFaces(frame):
 
 if __name__ == '__main__':
     
-    cam = cv2.VideoCapture(3)
+    cam = cv2.VideoCapture(0)
 
     
     ret, frame = cam.read()
@@ -112,7 +115,12 @@ if __name__ == '__main__':
             
         # draw eye
         if lastface is not None:
-            lastangle = getAngle(lastface[0])
+            lastangle = getRelativePosition(lastface[0]+w/2, frame.shape[1])
+            cv2.line(frame, 
+                     (frame.shape[1]/2, frame.shape[0]/2),
+                     (lastface[0]+lastface[2]/2, lastface[1]+lastface[3]/2),
+                     (255, 255, 255), 1)
+            print lastangle, lastface[0], frame.shape[1]
         drawEye(eye, lastangle)
         
         cv2.imshow("frame", frame)
