@@ -5,15 +5,98 @@ Created on 29.06.2015
 
 ToDo: extract faces
 '''
+import os
 import time
 import cv2
 import numpy as np
+import itertools
+from optparse import OptionParser
 
     
 frontal_face_cascade = cv2.CascadeClassifier('../res/haarcascade_frontalface_default.xml')
 profile_face_cascade = cv2.CascadeClassifier('../res/haarcascade_profileface.xml')
 
 IMAGE_SIZE = (320, 240)
+MINIMUM_FACE_TIME = 3
+IMAGE_DESTINATION = "./"
+CAMERA_NR = 0
+
+class Face(object):
+    
+    rect = (0,0,0,0)
+    offset = (0, 0)
+    newid = itertools.count().next
+    relocated = 0
+    t0 = 0
+    saved = False
+    
+    def __init__(self, rectangle, offset=(0, 0)):
+        self.rect = rectangle
+        self.offset = offset
+        self.id = Face.newid()
+        self.color = np.random.randint(0,255,3).tolist()
+        self.t0 = time.time()
+        self.saved = False
+
+        
+    def __getitem__(self, key):
+        return self.rect[key]
+    
+    def __setitem__(self, key, val):
+        self.rect[key] = val
+        
+    def update(self, rect):
+        self.rect = rect
+        self.relocated += 1
+        
+    def scaled(self, factor, offset=True):
+        scaled = []
+        for r in self.rect:
+            scaled.append(int(r*factor))
+            
+        if offset:
+            scaled[0] += int(self.offset[0]*factor)
+            scaled[1] += int(self.offset[1]*factor)
+            
+        return tuple(scaled)
+    
+    def cutFace(self, frame, scale_factor=None):
+        rx, ry, rw, rh = self.extendedROI()
+        if scale_factor is not None:
+            rx = int(rx*scale_factor)
+            ry = int(ry*scale_factor)            
+            rw = int(rw*scale_factor)
+            rh = int(rh*scale_factor)
+        return frame[ry:ry+rh, rx:rx+rw].copy()
+    
+    def extendedROI(self, factor=1.5):
+        x,y,w,h = self.rectWithOffset()
+        m_x = x + w/2
+        m_y = y + h/2
+        w = int(w*factor)
+        h = int(h*factor)
+        x = max(0, m_x-w/2)
+        y = max(0, m_y-h/2)
+        return (x,y,w,h)
+    
+    def rectWithOffset(self):
+        r = list(self.rect)
+        r[0] += self.offset[0]
+        r[1] += self.offset[1]
+        return r
+    
+    def middlePoint(self, offset=True):
+        if offset:
+            return (self.rect[0] + self.rect[2]/2 + self.offset[0],
+                    self.rect[1] + self.rect[3]/2 + self.offset[1])
+        
+        return (self.rect[0] + self.rect[2]/2,
+                self.rect[1] + self.rect[3]/2)
+        
+    @property
+    def period(self):
+        return time.time()-self.t0
+        
 
 def getRelativePosition(pos_x, width):
     return (1.0/width) * pos_x
@@ -27,18 +110,6 @@ def drawEye(frame, angle):
     cv2.circle(frame, m, r, (0,0,0), 2)
     cv2.circle(frame, (int(angle*width), m[1]), r/2, (255,130,100), -1)
     cv2.circle(frame, (int(angle*width), m[1]), r/3, (0,0,0), -1)
-    
-
-
-def getROI(face):
-    x,y,w,h = face
-    m_x = x + w/2
-    m_y = y + h/2
-    w = int(w*1.5)
-    h = int(h*1.5)
-    x = max(0, m_x-w/2)
-    y = max(0, m_y-h/2)
-    return (x,y,w,h)
 
 
 def detectFrontal(frame):
@@ -61,34 +132,43 @@ def detectFaces(frame):
     faces = detectFrontal(frame)
     if faces == ():
         faces = detectProfile(frame)
+
     return faces
 
 if __name__ == '__main__':
-    
-    cam = cv2.VideoCapture(0)
+    parser = OptionParser()
+    parser.add_option("-c", "--cam", dest="camera",
+                  help="Camera number", default=0)
+    parser.add_option("-t", "--tinme",
+                  help="Minimum time to save detected face", dest="mintime", default=3)
+    parser.add_option("-d", "--directory", dest="directory",
+                      help="Directory where faces will be saved", default="./")
 
+    (options, args) = parser.parse_args()
+    print options
+    MINIMUM_FACE_TIME = options.mintime
+    IMAGE_DESTINATION = options.directory
+    CAMERA_NR = options.camera
     
+    cam = cv2.VideoCapture(CAMERA_NR)    
     ret, frame = cam.read()
-
     
     lastface = None
     lastangle = 0
-    offset = (0, 0)
     
     while ret:
         t0 = time.time()
+        frame_full = frame
         frame = cv2.resize(frame, IMAGE_SIZE)
         eye = np.zeros(frame.shape, np.uint8)
 
         faces = ()        
         if lastface is not None:
-            roi = getROI(lastface)
+            roi = lastface.extendedROI()
             rx,ry,rw,rh = roi
             offset = rx, ry
-            cv2.rectangle(frame, (rx,ry), (rx+rw, ry+rh), (255,255,255), 1)
             faces = detectFaces(frame[ry:ry+rh, rx:rx+rw])
         if faces == ():
-            color = np.random.randint(0,255,3).tolist()
             lastface = None
             offset = (0, 0)
             faces = detectFaces(frame)
@@ -102,32 +182,55 @@ if __name__ == '__main__':
             x,y,w,h = f
             if w*h > last[2]*last[3]:
                 last = f
-        lastface = last
-        if lastface is not None:
-            lastface[0] += offset[0]
-            lastface[1] += offset[1]            
+        if lastface is not None and last is not None:
+            lastface.update(last)
+            lastface.offset = offset
+        elif last is not None:
+            lastface = Face(last, offset=offset)
+        else:
+            lastface = None
+            
+        # cut face
+        if lastface is not None and lastface.period >= MINIMUM_FACE_TIME and not lastface.saved:
+            scale_factor = frame_full.shape[0] / float(frame.shape[0])
+            face_image = lastface.cutFace(frame_full.copy(), scale_factor)
+            cv2.imshow("face", face_image)
+            cv2.imwrite(os.path.join(IMAGE_DESTINATION, "%d_%d.jpg" % (lastface.t0, lastface.id)), face_image)
+            lastface.saved = True
+        
+                   
         # draw face
         if lastface is not None:
             x,y,w,h = lastface
-            cv2.circle(frame, offset, 2, (255, 255, 255), 3)
-            cv2.circle(frame, (x+w/2, y+h/2), w/2, color, 2)
-            #print x,y,w,h
+            rx, ry, rw, rh = lastface.extendedROI()
+            cv2.circle(frame, lastface.offset, 2, (255, 255, 255), 3)
+            cv2.rectangle(frame, (rx,ry), (rx+rw, ry+rh), lastface.color, 1)
+            cv2.circle(frame, lastface.middlePoint(True), w/2, lastface.color, 2)
+            cv2.putText(frame, 
+                        "ID: %d, reloc: %d, %ds" % (lastface.id, lastface.relocated, lastface.period), 
+                        lastface.offset, 
+                        1, 
+                        1.0, 
+                        lastface.color)
             
         # draw eye
         if lastface is not None:
-            lastangle = getRelativePosition(lastface[0]+w/2, frame.shape[1])
+            lastangle = getRelativePosition(lastface.middlePoint(True)[0], frame.shape[1])
             cv2.line(frame, 
                      (frame.shape[1]/2, frame.shape[0]/2),
-                     (lastface[0]+lastface[2]/2, lastface[1]+lastface[3]/2),
+                     lastface.middlePoint(True),
                      (255, 255, 255), 1)
-            print lastangle, lastface[0], frame.shape[1]
         drawEye(eye, lastangle)
         
+        # show images
         cv2.imshow("frame", frame)
         cv2.imshow("eye", eye)
         k = cv2.waitKey(1)
         if k == 27:
             break
+        
+        # print frames per seconds
         print "%.2ffps" % (1.0/(time.time()-t0))
-        #print frame.shape
+        
+        # read new frame
         ret, frame = cam.read()
