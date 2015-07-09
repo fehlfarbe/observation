@@ -11,6 +11,10 @@ cap = None
 
 def get_frame():
     ret, frame = cap.read()
+    
+    if not ret:
+        return ret, None, None
+    
     frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     
     return ret, frame, frame_gray
@@ -19,7 +23,7 @@ def get_frame():
 if __name__ == '__main__':
     
     alpha = 0.01
-    videoinput = 1
+    videoinput = 0
     
     ### window
     #cv2.namedWindow("path", cv2.WINDOW_OPENGL)

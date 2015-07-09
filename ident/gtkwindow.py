@@ -28,12 +28,18 @@ MIN_DISTANCE = 1.0
 
 BUTTON_PIN = 22
 
+frontal_face_cascade = cv2.CascadeClassifier('../res/haarcascade_frontalface_default.xml')
+profile_face_cascade = cv2.CascadeClassifier('../res/haarcascade_profileface.xml')
+
+
 class Application():
     
     PAGE_START = 0
     PAGE_QUESTION = 1
     PAGE_LOADING = 2
     PAGE_WEB = 3
+    
+    DETECT_FACE = True
     
     def __init__(self):
         # create mainwindow
@@ -178,6 +184,38 @@ class Application():
             rawCapture = PiRGBArray(cam)
             cam.capture(rawCapture, format="rgb")
             image = rawCapture.array
+        
+        if self.DETECT_FACE:
+            # detect frontal face
+            faces = frontal_face_cascade.detectMultiScale(image, 1.3, 1,
+                                                      (cv2.cv.CV_HAAR_DO_CANNY_PRUNING + 
+                                                       cv2.cv.CV_HAAR_FIND_BIGGEST_OBJECT + 
+                                                       cv2.cv.CV_HAAR_DO_ROUGH_SEARCH),
+                                                      (40,40))
+            if faces == ():
+                profile_face_cascade.detectMultiScale(image, 1.3, 1,
+                                                          (cv2.cv.CV_HAAR_DO_CANNY_PRUNING + 
+                                                           cv2.cv.CV_HAAR_FIND_BIGGEST_OBJECT + 
+                                                           cv2.cv.CV_HAAR_DO_ROUGH_SEARCH),
+                                                          (40,40))
+            if faces == ():
+                image.flip()
+                profile_face_cascade.detectMultiScale(image, 1.3, 1,
+                                                          (cv2.cv.CV_HAAR_DO_CANNY_PRUNING + 
+                                                           cv2.cv.CV_HAAR_FIND_BIGGEST_OBJECT + 
+                                                           cv2.cv.CV_HAAR_DO_ROUGH_SEARCH),
+                                                          (40,40))
+                image.flip()
+            
+            if faces != ():
+                # detect biggest face and extract it
+                face = faces[0]
+                for f in faces:
+                    if f[2]*f[3] > face[2]*face[3]:
+                        face = f
+                x, y, w, h = face
+                image = face[y:y+h, x:x+w]
+            
         return image
     
     def takeVideo(self, directory, length=10):

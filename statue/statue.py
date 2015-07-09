@@ -21,6 +21,10 @@ MINIMUM_FACE_TIME = 3
 IMAGE_DESTINATION = "./"
 CAMERA_NR = 0
 
+FACE_TYPE_FRONTAL = "frontal"
+FACE_TYPE_PROFILE = "profile"
+
+
 class Face(object):
     
     rect = (0,0,0,0)
@@ -29,8 +33,9 @@ class Face(object):
     relocated = 0
     t0 = 0
     saved = False
+    face_type = None
     
-    def __init__(self, rectangle, offset=(0, 0)):
+    def __init__(self, rectangle, offset=(0, 0), face_type=None):
         self.rect = rectangle
         self.offset = offset
         self.id = Face.newid()
@@ -106,6 +111,9 @@ def drawEye(frame, angle):
     m = (width/2, height/2)
     r = min(width/2, height/2)
     
+    #reverse angle
+    angle = 1.0 - angle
+    
     cv2.circle(frame, m, r, (255,255,255), -1)
     cv2.circle(frame, m, r, (0,0,0), 2)
     cv2.circle(frame, (int(angle*width), m[1]), r/2, (255,130,100), -1)
@@ -120,20 +128,32 @@ def detectFrontal(frame):
                                                       (40,40),
                                                       tuple([x/2 for x in IMAGE_SIZE]))
     
-def detectProfile(frame):
-    return profile_face_cascade.detectMultiScale(frame, 1.3, 1,
+def detectProfile(frame, flipped=True):
+    if flipped:
+        frame.flip()
+    
+    faces = profile_face_cascade.detectMultiScale(frame, 1.3, 1,
                                                           (cv2.cv.CV_HAAR_DO_CANNY_PRUNING + 
                                                            cv2.cv.CV_HAAR_FIND_BIGGEST_OBJECT + 
                                                            cv2.cv.CV_HAAR_DO_ROUGH_SEARCH),
                                                           (40,40),
                                                           tuple([x/2 for x in IMAGE_SIZE]))
+    # flip back
+    if flipped:
+        frame.flip()
+        
+    return faces
 
 def detectFaces(frame):
+    ftype = FACE_TYPE_FRONTAL
     faces = detectFrontal(frame)
     if faces == ():
-        faces = detectProfile(frame)
+        faces = detectProfile(frame, flipped=False)
+        if faces == ():
+            faces = detectProfile(frame, flipped=False)        
+        ftype = FACE_TYPE_PROFILE
 
-    return faces
+    return faces, ftype
 
 if __name__ == '__main__':
     parser = OptionParser()
@@ -167,12 +187,11 @@ if __name__ == '__main__':
             roi = lastface.extendedROI()
             rx,ry,rw,rh = roi
             offset = rx, ry
-            faces = detectFaces(frame[ry:ry+rh, rx:rx+rw])
+            faces, face_type = detectFaces(frame[ry:ry+rh, rx:rx+rw])
         if faces == ():
             lastface = None
             offset = (0, 0)
-            faces = detectFaces(frame)
-            
+            faces, face_type = detectFaces(frame)            
 
         last = None
         for f in faces:
@@ -185,8 +204,9 @@ if __name__ == '__main__':
         if lastface is not None and last is not None:
             lastface.update(last)
             lastface.offset = offset
+            lastface.face_type = face_type
         elif last is not None:
-            lastface = Face(last, offset=offset)
+            lastface = Face(last, offset=offset, face_type=face_type)
         else:
             lastface = None
             
@@ -207,7 +227,7 @@ if __name__ == '__main__':
             cv2.rectangle(frame, (rx,ry), (rx+rw, ry+rh), lastface.color, 1)
             cv2.circle(frame, lastface.middlePoint(True), w/2, lastface.color, 2)
             cv2.putText(frame, 
-                        "ID: %d, reloc: %d, %ds" % (lastface.id, lastface.relocated, lastface.period), 
+                        "ID: %d, %s re: %d, %ds" % (lastface.id, lastface.face_type ,lastface.relocated, lastface.period), 
                         lastface.offset, 
                         1, 
                         1.0, 
