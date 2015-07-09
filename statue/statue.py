@@ -158,7 +158,7 @@ def detectFaces(frame):
 if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option("-c", "--cam", dest="camera",
-                  help="Camera number", default=0)
+                  help="Camera number", default=0, type="int")
     parser.add_option("-t", "--tinme",
                   help="Minimum time to save detected face", dest="mintime", default=3)
     parser.add_option("-d", "--directory", dest="directory",
