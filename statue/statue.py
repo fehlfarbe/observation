@@ -160,7 +160,8 @@ if __name__ == '__main__':
     parser.add_option("-c", "--cam", dest="camera",
                   help="Camera number", default=0, type="int")
     parser.add_option("-t", "--tinme",
-                  help="Minimum time to save detected face", dest="mintime", default=3)
+                  help="Minimum time to save detected face", dest="mintime", 
+                  default=3, type="int")
     parser.add_option("-d", "--directory", dest="directory",
                       help="Directory where faces will be saved", default="./")
 
@@ -215,7 +216,7 @@ if __name__ == '__main__':
             scale_factor = frame_full.shape[0] / float(frame.shape[0])
             face_image = lastface.cutFace(frame_full.copy(), scale_factor)
             cv2.imshow("face", face_image)
-            cv2.imwrite(os.path.join(IMAGE_DESTINATION, "%d_%d.jpg" % (lastface.t0, lastface.id)), face_image)
+            cv2.imwrite(os.path.join(IMAGE_DESTINATION, "statue_cam0_face%d_%d.jpg" % (lastface.id, lastface.t0)), face_image)
             lastface.saved = True
         
                    
