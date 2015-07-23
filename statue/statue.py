@@ -14,9 +14,10 @@ import itertools
 from optparse import OptionParser
 import pigpio
 
+basepath = os.path.dirname(os.path.realpath(__file__))
     
-frontal_face_cascade = cv2.CascadeClassifier('../res/haarcascade_frontalface_default.xml')
-profile_face_cascade = cv2.CascadeClassifier('../res/haarcascade_profileface.xml')
+frontal_face_cascade = cv2.CascadeClassifier(os.path.join(basepath, '../res/haarcascade_frontalface_default.xml'))
+profile_face_cascade = cv2.CascadeClassifier(os.path.join(basepath, '../res/haarcascade_profileface.xml'))
 
 IMAGE_SIZE = (320, 240)
 MINIMUM_FACE_TIME = 3
@@ -178,6 +179,8 @@ if __name__ == '__main__':
                   default=3, type="int")
     parser.add_option("-d", "--directory", dest="directory",
                       help="Directory where faces will be saved", default="./")
+    parser.add_option("-w", "--window", dest="window",
+                      help="Show windows", action="store_true")
 
     (options, args) = parser.parse_args()
     print options
@@ -264,11 +267,12 @@ if __name__ == '__main__':
         setServoPosition(servo, lastangle)
         
         # show images
-        cv2.imshow("frame", frame)
-        cv2.imshow("eye", eye)
-        k = cv2.waitKey(1)
-        if k == 27:
-            break
+	if options.window:
+	        cv2.imshow("frame", frame)
+	        cv2.imshow("eye", eye)
+	        k = cv2.waitKey(1)
+	        if k == 27:
+	            break
         
         # print frames per seconds
         print "%.2ffps" % (1.0/(time.time()-t0))
