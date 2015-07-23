@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 Created on 29.06.2015
 
@@ -11,6 +12,7 @@ import cv2
 import numpy as np
 import itertools
 from optparse import OptionParser
+import pigpio
 
     
 frontal_face_cascade = cv2.CascadeClassifier('../res/haarcascade_frontalface_default.xml')
@@ -23,6 +25,10 @@ CAMERA_NR = 0
 
 FACE_TYPE_FRONTAL = "frontal"
 FACE_TYPE_PROFILE = "profile"
+
+SERVO_GPIO = 4
+SERVO_OFFSET = 1000
+SERVO_LIMIT = 1500
 
 
 class Face(object):
@@ -118,6 +124,14 @@ def drawEye(frame, angle):
     cv2.circle(frame, m, r, (0,0,0), 2)
     cv2.circle(frame, (int(angle*width), m[1]), r/2, (255,130,100), -1)
     cv2.circle(frame, (int(angle*width), m[1]), r/3, (0,0,0), -1)
+    
+def setServoPosition(servo, angle):
+    angle = 1.0 - angle
+    pos = SERVO_LIMIT-SERVO_OFFSET
+    pos *= angle
+    pos += SERVO_OFFSET
+    print "set servo to ", pos
+    servo.set_servo_pulsewidth(SERVO_GPIO,pos)
 
 
 def detectFrontal(frame):
@@ -171,11 +185,16 @@ if __name__ == '__main__':
     IMAGE_DESTINATION = options.directory
     CAMERA_NR = options.camera
     
+    # init camera
     cam = cv2.VideoCapture(CAMERA_NR)    
     ret, frame = cam.read()
     
+    # init servo
+    servo = pigpio.pi()
+    servo.set_mode(SERVO_GPIO, pigpio.OUTPUT)
+    
     lastface = None
-    lastangle = 0
+    lastangle = 0.5
     
     while ret:
         t0 = time.time()
@@ -242,6 +261,7 @@ if __name__ == '__main__':
                      lastface.middlePoint(True),
                      (255, 255, 255), 1)
         drawEye(eye, lastangle)
+        setServoPosition(servo, lastangle)
         
         # show images
         cv2.imshow("frame", frame)
