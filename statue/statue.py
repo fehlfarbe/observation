@@ -28,8 +28,8 @@ FACE_TYPE_FRONTAL = "frontal"
 FACE_TYPE_PROFILE = "profile"
 
 SERVO_GPIO = 4
-SERVO_OFFSET = 1000
-SERVO_LIMIT = 1500
+SERVO_OFFSET = 800
+SERVO_LIMIT = 1700
 
 
 class Face(object):
@@ -140,7 +140,7 @@ def detectFrontal(frame):
                                                       (cv2.cv.CV_HAAR_DO_CANNY_PRUNING + 
                                                        cv2.cv.CV_HAAR_FIND_BIGGEST_OBJECT + 
                                                        cv2.cv.CV_HAAR_DO_ROUGH_SEARCH),
-                                                      (40,40),
+                                                      (20,20),
                                                       tuple([x/2 for x in IMAGE_SIZE]))
     
 def detectProfile(frame, flipped=True):
@@ -237,7 +237,8 @@ if __name__ == '__main__':
         if lastface is not None and lastface.period >= MINIMUM_FACE_TIME and not lastface.saved:
             scale_factor = frame_full.shape[0] / float(frame.shape[0])
             face_image = lastface.cutFace(frame_full.copy(), scale_factor)
-            cv2.imshow("face", face_image)
+            if options.window:
+                cv2.imshow("face", face_image)
             cv2.imwrite(os.path.join(IMAGE_DESTINATION, "statue_cam0_face%d_%d.jpg" % (lastface.id, lastface.t0)), face_image)
             lastface.saved = True
         
