@@ -28,8 +28,8 @@ FACE_TYPE_FRONTAL = "frontal"
 FACE_TYPE_PROFILE = "profile"
 
 SERVO_GPIO = 4
-SERVO_OFFSET = 800
-SERVO_LIMIT = 1700
+SERVO_OFFSET = 1100
+SERVO_LIMIT = 1400
 
 
 class Face(object):
@@ -141,7 +141,7 @@ def detectFrontal(frame):
                                                        cv2.cv.CV_HAAR_FIND_BIGGEST_OBJECT + 
                                                        cv2.cv.CV_HAAR_DO_ROUGH_SEARCH),
                                                       (20,20),
-                                                      tuple([x/2 for x in IMAGE_SIZE]))
+                                                      tuple([x/4 for x in IMAGE_SIZE]))
     
 def detectProfile(frame, flipped=True):
     if flipped:
@@ -151,8 +151,8 @@ def detectProfile(frame, flipped=True):
                                                           (cv2.cv.CV_HAAR_DO_CANNY_PRUNING + 
                                                            cv2.cv.CV_HAAR_FIND_BIGGEST_OBJECT + 
                                                            cv2.cv.CV_HAAR_DO_ROUGH_SEARCH),
-                                                          (40,40),
-                                                          tuple([x/2 for x in IMAGE_SIZE]))
+                                                          (20,20),
+                                                          tuple([x/4 for x in IMAGE_SIZE]))
     # flip back
     if flipped:
         frame.flip()
@@ -162,11 +162,11 @@ def detectProfile(frame, flipped=True):
 def detectFaces(frame):
     ftype = FACE_TYPE_FRONTAL
     faces = detectFrontal(frame)
-    if faces == ():
-        faces = detectProfile(frame, flipped=False)
-        if faces == ():
-            faces = detectProfile(frame, flipped=False)        
-        ftype = FACE_TYPE_PROFILE
+    #if faces == ():
+    #    faces = detectProfile(frame, flipped=False)
+    #    if faces == ():
+    #        faces = detectProfile(frame, flipped=False)        
+    #    ftype = FACE_TYPE_PROFILE
 
     return faces, ftype
 
