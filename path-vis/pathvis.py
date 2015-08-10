@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 Created on 04.06.2015
 
@@ -6,6 +7,7 @@ Created on 04.06.2015
 import cv2
 import numpy as np
 import time
+from rotationsensor import RotationSensor
 
 cap = None
 
@@ -39,6 +41,9 @@ if __name__ == '__main__':
     average = np.float32(frame_gray)
     path_average = np.zeros(frame_gray.shape, np.float32)
     white = np.ones(frame_gray.shape, np.uint8)*255
+
+    ### rotation
+    r = RotationSensor()
     
     frame_nr = 1
     while ret:
@@ -55,7 +60,7 @@ if __name__ == '__main__':
             path = cv2.convertScaleAbs(path_average)
             path = cv2.subtract(white, path)
             
-            mat = cv2.getRotationMatrix2D((path.shape[1]/2, path.shape[0]/2), frame_nr % 360, 1.0)
+            mat = cv2.getRotationMatrix2D((path.shape[1]/2, path.shape[0]/2), r.value(), 1.0)
             path = cv2.warpAffine(path, mat, (path.shape[1], path.shape[0]))
   
             #cv2.imshow("frame", frame_gray)
