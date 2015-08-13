@@ -6,11 +6,17 @@ Created on 20.08.2015
 import RPi.GPIO as GPIO
 import time
 import numpy
+from threading import Thread
 
 class Potentiometer(object):
 
     a_pin = 18
     b_pin = 23
+
+    values = []
+    values_length = 50
+    _thread = None
+    _running = False
 
     def __init__(self, a=18, b=23, minimum=24, maximum=280):
 
@@ -41,6 +47,7 @@ class Potentiometer(object):
         return self.charge_time()
 
     def value(self):
+        '''
         vals = []
         for i in range(5):
             v = self.analog_read()
@@ -48,9 +55,33 @@ class Potentiometer(object):
             v = max(self.min, v)
             vals.append(v)
         return numpy.median(vals)
+        '''
+        return sum(self.values) / float(len(self.values))
 
     def mapped(self, minimum=0, maximum=360):
         val = self.value() - self.min
         interval = self.max-self.min
         val = float(maximum)/interval * val
         return val
+
+    def _update_values(self):
+        print "start thread"
+        self._running = True
+        while self._running:
+            v = self.analog_read()
+            if len(self.values) > self.values_length:
+                self.values.pop(0)
+            self.values.append(v)
+        print "stop thread"
+
+    def __enter__(self):
+        if self._thread is None:
+            self._thread = Thread(target=self._update_values)
+            self._thread.start()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self._running = False
+        if self._thread is not None:
+            self._thread.join()
+
