@@ -7,11 +7,11 @@ from threading import Thread
 from optparse import OptionParser
 import cv2
 import numpy
-import gtk
+#import gtk
 
 
 image_buffer = None
-image_size = (0, 0)
+image_size = (800, 600)
 run = True
 
 
@@ -44,16 +44,17 @@ if __name__ == '__main__':
     addr = options.addr.split(',')
     
     ### get screen size
-    window = gtk.Window()
+    #window = gtk.Window()
     # the screen contains all monitors
-    screen = window.get_screen()
-    screen_width, screen_height = gtk.gdk.screen_width(), gtk.gdk.screen_height()
-    print screen_width, screen_height
+    #screen = window.get_screen()
+    #screen_width, screen_height = gtk.gdk.screen_width(), gtk.gdk.screen_height()
+    #print screen_width, screen_height
+    screen_width, screen_height = (1280, 1024)
     image_buffer = numpy.zeros((screen_height, screen_width, 3), dtype=numpy.uint8)
     rows = max(len(addr) / 2, 1)
     image_size = (image_buffer.shape[1]/2, image_buffer.shape[0]/rows)
     
-    print rows
+    print rows, image_size
     threads = []
     i=0
     for a in addr:
