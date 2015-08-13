@@ -47,13 +47,14 @@ if __name__ == '__main__':
     sock = None
     if options.network:
         ip, port = options.network.split(':')
-        sock = socket.socket()
-        print "trying to connect to ", options.network
-        try:
-            sock.connect((ip, int(port)))
-        except Exception, e:
-            print "no connection %s" % str(e)
-            sock = None
+        while sock is None:
+            try:
+                sock = socket.socket()
+                print "trying to connect to ", options.network
+                sock.connect((ip, int(port)))
+            except Exception, e:
+                print "no connection %s" % str(e)
+                sock = None
     
     ### window
     #cv2.namedWindow("path", cv2.WINDOW_OPENGL)

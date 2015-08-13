@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 Created on 13.08.2015
 
@@ -32,7 +33,7 @@ def recieve_and_save(port):
         if s is None:
             try:
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.bind(('localhost', port))
+                s.bind(('0.0.0.0', port))
                 s.listen(True)
                 conn, addr = s.accept()
             except:
