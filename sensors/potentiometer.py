@@ -56,6 +56,7 @@ class Potentiometer(object):
             vals.append(v)
         return numpy.median(vals)
         '''
+        return 0
         return sum(self.values) / float(len(self.values))
 
     def mapped(self, minimum=0, maximum=360):
@@ -72,6 +73,7 @@ class Potentiometer(object):
             if len(self.values) > self.values_length:
                 self.values.pop(0)
             self.values.append(v)
+            time.sleep(0.01)
         print "stop thread"
 
     def __enter__(self):
@@ -81,7 +83,9 @@ class Potentiometer(object):
         return self
 
     def __exit__(self, type, value, traceback):
+        print "exit called"
         self._running = False
         if self._thread is not None:
             self._thread.join()
+        return False
 
