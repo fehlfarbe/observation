@@ -56,8 +56,8 @@ class Potentiometer(object):
             vals.append(v)
         return numpy.median(vals)
         '''
-        return 0
-        return sum(self.values) / float(len(self.values))
+        #return 0
+        return numpy.median(self.values)
 
     def mapped(self, minimum=0, maximum=360):
         val = self.value() - self.min
