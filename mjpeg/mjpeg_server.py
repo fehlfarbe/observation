@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import cv2
 import Image
 from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
