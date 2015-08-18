@@ -13,6 +13,9 @@ import numpy as np
 import itertools
 from optparse import OptionParser
 import pigpio
+import sys
+sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/..")
+from mjpeg.mjpeg_server import getServer
 
 basepath = os.path.dirname(os.path.realpath(__file__))
     
@@ -181,12 +184,23 @@ if __name__ == '__main__':
                       help="Directory where faces will be saved", default="./")
     parser.add_option("-w", "--window", dest="window",
                       help="Show windows", action="store_true")
+    parser.add_option("-p", "--port", dest="port",type="int", default=None,
+                      help="MJPEG Port") 
 
     (options, args) = parser.parse_args()
     print options
     MINIMUM_FACE_TIME = options.mintime
     IMAGE_DESTINATION = options.directory
     CAMERA_NR = options.camera
+    
+    # MJPEG Server
+    mjpeg_server = None
+    if options.port is not None:
+        try:
+            mjpeg_server = getServer(options.port)
+            mjpeg_server.start_server()
+        except Exception, e:
+            print e
     
     # init camera
     cam = cv2.VideoCapture(CAMERA_NR)    
@@ -268,12 +282,15 @@ if __name__ == '__main__':
         setServoPosition(servo, lastangle)
         
         # show images
-	if options.window:
-	        cv2.imshow("frame", frame)
-	        cv2.imshow("eye", eye)
-	        k = cv2.waitKey(1)
-	        if k == 27:
-	            break
+        if options.window:
+            cv2.imshow("frame", frame)
+            cv2.imshow("eye", eye)
+            k = cv2.waitKey(1)
+            if k == 27:
+                break
+            
+        if mjpeg_server is not None:
+            mjpeg_server.update_image(frame)
         
         # print frames per seconds
         print "%.2ffps" % (1.0/(time.time()-t0))

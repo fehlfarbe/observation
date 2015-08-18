@@ -8,8 +8,14 @@ import cv2
 import numpy as np
 import time
 import sys
+import os
+sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/..")
+from mjpeg.mjpeg_server import getServer
 import socket
 from optparse import OptionParser
+
+VIS_PATH = 'path'
+VIS_FRAME = 'frame'
 
 cap = None
 
@@ -36,7 +42,11 @@ if __name__ == '__main__':
     parser.add_option("-o", "--stdout", dest="out",
                       help="Write images to stdout", action="store_true")
     parser.add_option("-n", "--network", dest="network",
-                      help="Write images to ip:port")       
+                      help="Write images to ip:port")
+    parser.add_option("-t", "--time", dest="time", default=0,type="int",
+                      help="Switch between path and normal visualization")
+    parser.add_option("-p", "--port", dest="port",type="int", default=None,
+                      help="MJPEG Port") 
 
     (options, args) = parser.parse_args()
     
@@ -55,6 +65,14 @@ if __name__ == '__main__':
             except Exception, e:
                 print "no connection %s" % str(e)
                 sock = None
+    # MJPEG Server
+    mjpeg_server = None
+    if options.port is not None:
+        try:
+            mjpeg_server = getServer(options.port)
+            mjpeg_server.start_server()
+        except Exception, e:
+            print e
     
     ### window
     #cv2.namedWindow("path", cv2.WINDOW_OPENGL)
@@ -74,6 +92,8 @@ if __name__ == '__main__':
 
     
     frame_nr = 1
+    t_last = time.time()
+    current = VIS_PATH
     while ret:
         t0 = time.time()
         ### update running average
@@ -94,7 +114,17 @@ if __name__ == '__main__':
             #cv2.imshow("frame", frame_gray)
             #cv2.imshow("diff", diff)
             if options.window:
-                cv2.imshow("path", path)
+                if options.time > 0:
+                    if time.time()-t_last > options.time:
+                        if current == VIS_PATH:
+                            current = VIS_FRAME
+                        else:
+                            current = VIS_PATH
+                        t_last = time.time()
+                if current == VIS_PATH:
+                    cv2.imshow("path", path)
+                else:
+                    cv2.imshow("path", frame)
                 k = cv2.waitKey(1)
                 if k == 27:
                     break
@@ -110,6 +140,9 @@ if __name__ == '__main__':
                     sock.send( stringData )
                 except Exception, e:
                     print "Can't send image data to %s\n%s" % (options.network, e)
+            if mjpeg_server is not None:
+                mjpeg = cv2.cvtColor(path, cv2.COLOR_GRAY2BGR)
+                mjpeg_server.update_image(mjpeg)
                 
         
         ret, frame, frame_gray = get_frame()
