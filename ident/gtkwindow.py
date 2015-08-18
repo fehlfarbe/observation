@@ -21,6 +21,8 @@ import RPi.GPIO as GPIO
 from sensors import hcsr04
 from threading import Thread
 from jinja2 import Template
+from optparse import OptionParser
+
 
 
 DISTANCE_TRIGGER = 18
@@ -28,6 +30,8 @@ DISTANCE_ECHO = 24
 MIN_DISTANCE = 1.0
 
 BUTTON_PIN = 22
+SAVE_DIRECTORY = "."
+QUESTION_TIMEOUT = 15
 
 frontal_face_cascade = cv2.CascadeClassifier('../res/haarcascade_frontalface_default.xml')
 profile_face_cascade = cv2.CascadeClassifier('../res/haarcascade_profileface.xml')
@@ -42,7 +46,7 @@ class Application():
     
     DETECT_FACE = True
     
-    def __init__(self):
+    def __init__(self, detect_face=True):
         # create mainwindow
         self.window = gtk.Window()
         self.window.set_title("iDENT")
@@ -56,6 +60,8 @@ class Application():
         self.window.show_all()
         self.window.fullscreen()
         
+        # detect faces?
+        self.DETECT_FACE = detect_face
         # init current image/dir data
         self.current_dir = None
         # init camera
@@ -83,7 +89,7 @@ class Application():
         with self.hcsr04 as d:
             while self.measure_thread_run:
                 distance = d.average_distance(5)
-                print distance
+                #print distance
                 if self.notebook.current_page() == self.PAGE_START and distance <= MIN_DISTANCE:
                     image = self.takePhoto()
                     self.current_dir = self.createNewDirectory()
@@ -156,6 +162,16 @@ class Application():
     def showQuestionWidget(self):
         self.question_image.set_from_file(os.path.join(self.current_dir, "image.jpg"))
         self.notebook.set_current_page(self.PAGE_QUESTION)
+        
+        ### timeout
+        t0 = time.time()
+        def timer():
+            if self.notebook.current_page() == self.PAGE_QUESTION and (time.time()-t0)>QUESTION_TIMEOUT:
+                self.notebook.set_current_page(self.PAGE_START)
+                return False
+            return True
+        
+        source_id = gobject.timeout_add(100, timer)
 
     def showWebWidget(self):
         Thread(target=self.takeVideo, args=(self.current_dir, 10)).start()
@@ -188,11 +204,12 @@ class Application():
         
         if self.DETECT_FACE:
             # detect frontal face
-            faces = frontal_face_cascade.detectMultiScale(image, 1.3, 3,
+            faces = frontal_face_cascade.detectMultiScale(image, 1.3, 5,
                                                       (cv2.cv.CV_HAAR_DO_CANNY_PRUNING + 
                                                        cv2.cv.CV_HAAR_FIND_BIGGEST_OBJECT + 
                                                        cv2.cv.CV_HAAR_DO_ROUGH_SEARCH),
                                                       (40,40))
+            '''
             if faces == ():
                 profile_face_cascade.detectMultiScale(image, 1.3, 3,
                                                           (cv2.cv.CV_HAAR_DO_CANNY_PRUNING + 
@@ -207,6 +224,7 @@ class Application():
                                                            cv2.cv.CV_HAAR_DO_ROUGH_SEARCH),
                                                           (40,40))
                 #image.flip()
+            '''
             
             if faces != ():
                 # detect biggest face and extract it
@@ -230,8 +248,8 @@ class Application():
     
     def createNewDirectory(self):
         now = datetime.now()
-        dir_name = now.strftime("%Y-%m-%d_%H-%M-%S")
-        os.mkdir(dir_name)
+        dir_name = "iDent_cam1_%s" % now.strftime("%Y-%m-%d_%H-%M-%S")
+        os.mkdir(os.path.join(SAVE_DIRECTORY, dir_name))
         return dir_name
     
     def renderHTML(self):
@@ -253,4 +271,18 @@ class Application():
         
 
 if __name__ == '__main__':
+    parser = OptionParser()
+    parser.add_option("-d", "--directory", dest="directory",
+                      help="Directory where images will be saved", default="./")
+    parser.add_option("-u", "--distance", dest="distance", type="float",
+                      help="Minimum distance for ultrasonic sensor in meter", default=1.0)
+    parser.add_option("-q", "--qtimeout", dest="qtimeout", type="int",
+                      help="Yes/No timeout. After this timeout the programm will switch to startpage.", 
+                      default=15)
+    (options, args) = parser.parse_args()
+    
+    SAVE_DIRECTORY = options.directory
+    MIN_DISTANCE = options.distance
+    QUESTION_TIMEOUT = options.qtimeout
+    
     app = Application()
