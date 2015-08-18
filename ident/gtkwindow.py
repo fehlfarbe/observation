@@ -7,6 +7,7 @@ Created on 23.06.2015
 '''
 import os, time, sys
 from datetime import datetime
+os.chdir(sys.path[0])
 sys.path.insert(1,'..')
 import pygtk
 pygtk.require('2.0')
@@ -99,7 +100,7 @@ class Application():
         self.notebook.set_show_tabs(False)
         
         # set start page
-        self.start_label = gtk.Label("Startseite")
+        self.start_label = gtk.Label("Ich bin nicht, was ich bin. (William Shakespeare, Othello)")
         # set question page
         self.question = gtk.VBox(spacing=10)
         hbox = gtk.HBox(spacing=10)
@@ -182,30 +183,30 @@ class Application():
         with picamera.PiCamera() as cam:
             cam.resolution = (640, 480)
             rawCapture = PiRGBArray(cam)
-            cam.capture(rawCapture, format="rgb")
+            cam.capture(rawCapture, format="bgr")
             image = rawCapture.array
         
         if self.DETECT_FACE:
             # detect frontal face
-            faces = frontal_face_cascade.detectMultiScale(image, 1.3, 1,
+            faces = frontal_face_cascade.detectMultiScale(image, 1.3, 3,
                                                       (cv2.cv.CV_HAAR_DO_CANNY_PRUNING + 
                                                        cv2.cv.CV_HAAR_FIND_BIGGEST_OBJECT + 
                                                        cv2.cv.CV_HAAR_DO_ROUGH_SEARCH),
                                                       (40,40))
             if faces == ():
-                profile_face_cascade.detectMultiScale(image, 1.3, 1,
+                profile_face_cascade.detectMultiScale(image, 1.3, 3,
                                                           (cv2.cv.CV_HAAR_DO_CANNY_PRUNING + 
                                                            cv2.cv.CV_HAAR_FIND_BIGGEST_OBJECT + 
                                                            cv2.cv.CV_HAAR_DO_ROUGH_SEARCH),
                                                           (40,40))
             if faces == ():
-                image.flip()
-                profile_face_cascade.detectMultiScale(image, 1.3, 1,
+                #image.flip()
+                profile_face_cascade.detectMultiScale(image, 1.3, 3,
                                                           (cv2.cv.CV_HAAR_DO_CANNY_PRUNING + 
                                                            cv2.cv.CV_HAAR_FIND_BIGGEST_OBJECT + 
                                                            cv2.cv.CV_HAAR_DO_ROUGH_SEARCH),
                                                           (40,40))
-                image.flip()
+                #image.flip()
             
             if faces != ():
                 # detect biggest face and extract it
@@ -214,7 +215,7 @@ class Application():
                     if f[2]*f[3] > face[2]*face[3]:
                         face = f
                 x, y, w, h = face
-                image = face[y:y+h, x:x+w]
+                image = image[y:y+h, x:x+w]
             
         return image
     
