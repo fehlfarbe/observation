@@ -1,9 +1,13 @@
-import cv2
+'''
+Created on 20.08.2015
+
+@author: kolbe
+'''
 import RPi.GPIO as GPIO
 import time
 import numpy
 
-class Rotation(object):
+class Potentiometer(object):
 
     a_pin = 18
     b_pin = 23
@@ -50,22 +54,3 @@ class Rotation(object):
         interval = self.max-self.min
         val = float(maximum)/interval * val
         return val
-
-
-
-if __name__ == '__main__':
-    cap = cv2.VideoCapture(0)
-    ret, frame = cap.read()
-    r = Rotation()
-    while ret:
-        rot = r.mapped()
-        print rot
-        mat = cv2.getRotationMatrix2D((frame.shape[1]/2, frame.shape[0]/2), rot, 1.0)
-        frame = cv2.warpAffine(frame, mat, (frame.shape[1], frame.shape[0]))
-        cv2.imshow("frame", frame)
-        k = cv2.waitKey(1)
-        if k == 27:
-            break
-        ret, frame = cap.read()
-
-
