@@ -42,6 +42,7 @@ if __name__ == '__main__':
         for f in files:
             if f.startswith(options.prefix) and f.endswith(FILE_TYPES):
                 filtered.append(f)
+        filtered = sorted(filtered)
         new_files = list(set(filtered) - set(printed_files))
         if options.time != 0:
             if len(new_files) == 0:
