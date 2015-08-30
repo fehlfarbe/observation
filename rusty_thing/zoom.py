@@ -3,7 +3,7 @@ import sys
 sys.path.append(sys.path[0]+"/..")
 from optparse import OptionParser
 import cv2
-#from sensors.potentiometer import Potentiometer
+from sensors.potentiometer import Potentiometer
 
 WINDOW_NAME = "frame"
 
@@ -23,6 +23,11 @@ def zoom(frame, f):
     return frame[h_m-h_new_m:h_m+h_new_m,
                  w_m-w_new_m:w_m+w_new_m]
     
+def mapped(low, up, value):
+    val = value - low
+    upper = up - low
+    return max((0.9/upper) * val, 0)
+    
 
 if __name__ == '__main__':
     parser = OptionParser()
@@ -31,27 +36,35 @@ if __name__ == '__main__':
     parser.add_option("-f", "--fullscreen", dest="fullscreen",
                       help="Fullscreen window", action="store_true")
     parser.add_option("-l", "--limit", dest="limit", type="float", default=0.9,
-                      help="Upper limit for zoom (0-1.0)")    
+                      help="Upper limit for zoom (0-1.0)")
+    parser.add_option("--lower", dest="lower", type="float", default=100,
+                      help="Lower limit for zoom sensor")
+    parser.add_option("--upper", dest="upper", type="float", default=200,
+                      help="Upper limit for zoom sensor")   
 
     (options, args) = parser.parse_args()
     
     ### open capture device
     cap = cv2.VideoCapture(options.camera)
+    cap.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, 1920)
+    cap.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, 1080)
     ret, frame = cap.read()
     
     if options.fullscreen:
         cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
         cv2.setWindowProperty(WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
 
-    #r = Potentiometer()
-    rot = 0.0
-    step = 0.005
-    upper_limit = options.limit-step
+    r = Potentiometer()
+    #rot = 100
+    #step = 5
     while ret:
-        if rot >= upper_limit or rot < 0:
-            step = -step
-        rot += step
-        zoomed = zoom(frame, rot)
+        #if rot >= options.upper or rot < options.lower:
+        #    step = -step
+        #rot += step
+        rot = mapped(options.lower, options.upper, r.value())
+        rot_mapped = mapped(options.lower, options.upper, r)
+        print rot, rot_mapped
+        zoomed = zoom(frame, rot_mapped)
         cv2.imshow(WINDOW_NAME, zoomed)
         #cv2.imshow("frame", frame)
         k = cv2.waitKey(1)
