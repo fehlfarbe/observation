@@ -13,8 +13,8 @@ class Potentiometer(object):
     a_pin = 18
     b_pin = 23
 
-    values = []
-    values_length = 50
+    values = [0, ]
+    values_length = 60
     _thread = None
     _running = False
 
@@ -73,7 +73,7 @@ class Potentiometer(object):
             if len(self.values) > self.values_length:
                 self.values.pop(0)
             self.values.append(v)
-            time.sleep(0.01)
+            time.sleep(0.001)
         print "stop thread"
 
     def __enter__(self):

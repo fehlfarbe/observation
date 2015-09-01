@@ -26,7 +26,7 @@ def zoom(frame, f):
 def mapped(low, up, value):
     val = value - low
     upper = up - low
-    return max((0.9/upper) * val, 0)
+    return max((0.95/upper) * float(val), 0)
     
 
 if __name__ == '__main__':
@@ -45,29 +45,31 @@ if __name__ == '__main__':
     (options, args) = parser.parse_args()
     
     ### open capture device
-    cap = cv2.VideoCapture(options.camera)
-    cap.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, 1920)
-    cap.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, 1080)
+    cap = cv2.VideoCapture(0)
+    #cap.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, 1280)
+    #cap.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, 720)
     ret, frame = cap.read()
+    print "image size ", frame.shape
     
     if options.fullscreen:
         cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
         cv2.setWindowProperty(WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
 
-    r = Potentiometer()
-    #rot = 100
-    #step = 5
-    while ret:
-        #if rot >= options.upper or rot < options.lower:
-        #    step = -step
-        #rot += step
-        rot = mapped(options.lower, options.upper, r.value())
-        rot_mapped = mapped(options.lower, options.upper, r)
-        print rot, rot_mapped
-        zoomed = zoom(frame, rot_mapped)
-        cv2.imshow(WINDOW_NAME, zoomed)
-        #cv2.imshow("frame", frame)
-        k = cv2.waitKey(1)
-        if k == 27:
-            break
-        ret, frame = cap.read()
+    with Potentiometer(minimum=options.lower, maximum=options.upper) as r:
+        while ret:
+            #if rot >= options.upper or rot < options.lower:
+            #    step = -step
+            #rot += step
+            rot = r.value()
+            print int(rot), options.upper
+            rot = min(options.upper, rot)
+            #rot = mapped(options.lower, options.upper, rot)
+            rot_mapped = mapped(options.lower, options.upper, rot)
+            print rot, rot_mapped
+            zoomed = zoom(frame, rot_mapped)
+            cv2.imshow(WINDOW_NAME, zoomed)
+            #cv2.imshow("frame", frame)
+            k = cv2.waitKey(1)
+            if k == 27:
+                break
+            ret, frame = cap.read()
